@@ -29,7 +29,7 @@
 	
 	<script> 
 
-	d3.json("VT-duke.json", viz);
+	d3.json("\data\\VT-duke.json", viz);
 	
 	function viz(data) {
 		
@@ -40,19 +40,26 @@
 		console.log("All Plays:");
 		console.log(plays);
 		
-		var uniquePlayIds = getUniquePlayIds(plays);
-		console.log("Unique: ")
-		console.log(uniquePlayIds);
+		<!-- var uniquePlayIds = getUniquePlayIds(plays); -->
+		<!-- console.log("Unique: ") -->
+		<!-- console.log(uniquePlayIds); -->
 		
 		plays = addPasserRusherRecieverToPlays(plays);
 		console.log("All Plays (w/ passer, rusher, reciever):");
 		console.log(plays);
 		
-		plays = getPlaysRushing(plays);
-		console.log("All Rushing Plays:");
-		console.log(plays);
+		<!-- plays = getPlaysRushing(plays); -->
+		<!-- console.log("All Rushing Plays:"); -->
+		<!-- console.log(plays); -->
+		
+		//printPlayText(plays, ["3"]); //,"3" "24"
+		printPlay(plays, ["3"]);
 		
 	};
+	
+	// 2 = Period End, 3 = Pass Incomplete, 5 = Rush, 7 = Sack, 8 = Penalty, 21 = Timeout
+	// 24 = Pass Reception, 38 = Block FG - TD, 52 = Punt, 53 = Kickoff, 59 = FG Good
+	// 60 = FG Miss, 65 = End of Half, 66 = End of Game, 68 = Rush TD
 	
 	function getUniquePlayIds(plays) {
 
@@ -107,20 +114,84 @@
 		return plays;
 	};
 	
-	// NOT COMPLETE
 	function addPasserRusherRecieverToPlays(plays) {
-	
+		
+		let rushingPlayIds = ["5", "7", "68"];
+		let passingPlayIds = ["3", "24"]; // !!NEED INTERCEPTIONS!!
+		
 		Object.keys(plays).forEach(function(play) {
+			let playText = plays[play].text;
+			
 			plays[play]["passer"] = null;
 			plays[play]["rusher"] = null;
 			plays[play]["receiver"] = null;
 			
+			// Rushing plays (type 5)
+			if (plays[play].type.id == 5) {
+				let endOfName = playText.search("run") - 1;
+				plays[play].rusher = playText.substring(0,endOfName);
+			}
 			
+			// Sacks (type 7)
+			if (plays[play].type.id == 7) {
+				let endOfName = playText.search("sacked") - 1;
+				plays[play].rusher = playText.substring(0,endOfName);
+			}
 			
-
+			// Passing plays (type 7)
+			if (passingPlayIds.indexOf(plays[play].type.id) != -1) {
+				let length = playText.length;
+				let endOfPasserName = playText.search("pass") - 1;
+				
+				let beginningOfRecName = playText.search("complete to") + 12;
+				
+				let endOfRecName = null;
+				if (playText.substring(length-10, length) == "incomplete") {
+						endOfRecName = null;
+					} else if (playText.search("broken up") > -1) {
+						endOfRecName = playText.search("broken up") - 3;
+					} else if (playText.search("for") > -1) {
+						endOfRecName = playText.search("for") - 1;	
+					} else {
+						endOfRecName = length;
+					};
+				
+				// Passer's name always first
+				plays[play].passer = playText.substring(0, endOfPasserName);
+				// Receiver's name not always in the same place
+				plays[play].receiver = playText.substring(beginningOfRecName, endOfRecName);
+			};
+		
 		});
 		return(plays);
 	};
+	
+	function printPlayText(plays, ids) {
+		var plays2 = _.cloneDeep(plays);
+		if (ids != null) {
+			Object.keys(plays2).forEach(function(play) {
+				if (ids.indexOf(plays2[play].type.id) == -1) {
+					delete plays2[play];
+				};
+			});
+		}
+		Object.keys(plays2).forEach(function(play) {
+			console.log(plays2[play].text);
+		});
+	};
+	
+	function printPlay(plays, ids) {
+		var plays2 = _.cloneDeep(plays);
+		if (ids != null) {
+			Object.keys(plays2).forEach(function(play) {
+				if (ids.indexOf(plays2[play].type.id) == -1) {
+					delete plays2[play];
+				};
+			});
+		}
+		console.log(plays2);
+	};
+	
 	
 	</script>
 	
